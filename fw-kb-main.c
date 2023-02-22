@@ -683,7 +683,8 @@ void scan_thread (void)
 
         gpio_set_dir(set_ln, GPIO_OUT);
         gpio_put (set_ln, 0); // Drive test line low
-        sleep_ms(1);
+        // sleep_ms (1);
+        sleep_us (600);
 
         unsigned u_row = gpio_get_all ();
         u_row = (u_row >> 12) & ROW_MASK;
@@ -691,6 +692,7 @@ void scan_thread (void)
         cur_scan [sel_line] = (__uint8_t)u_row;
 
         gpio_put (set_ln, 1); // Drive test line high again
+        sleep_us (500);
 
         // Set line back to an input
         gpio_set_dir(set_ln, GPIO_IN);
@@ -783,11 +785,11 @@ int main()
     // cursory check that core-1 started OK
     if (g == 99)
     {
-        printf ("Core-1 seems OK\n");
+        printf ("Core-1 started OK\n");
     }
     else
     {
-        printf ("Core-1 not started in this test\n");
+        printf ("Core-1 not started correctly\n");
     }
 
     // forever - read keycodes from core-1 and pass them to the hid_task() for sending
