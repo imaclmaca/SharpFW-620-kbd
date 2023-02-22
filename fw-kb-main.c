@@ -1,4 +1,4 @@
-/* Test harness for the Sharp FontWriter 620 keycode tables */
+/* Entry point for the Sharp FontWriter 620 keycode martix decoder */
 
 // Basics to get the pico going...
 #include <stdio.h>
@@ -13,7 +13,7 @@
 #include <tusb.h>
 
 // local parts
-#include "kb-main.h"
+#include "fw-kb-main.h"
 
 /* Are we emitting serial debug? */
 #define SER_DBG_ON  1  // serial debug on

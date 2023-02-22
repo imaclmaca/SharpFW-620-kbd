@@ -21,24 +21,24 @@ pico_sdk_init()
 add_compile_options(-Os -fwrapv -Wall )
 
 # Say what exe we are trying to build
-add_executable(kb_test
+add_executable(sharpFWkbd
 # source files needed are:
-                kb_test.c
+                fw-kb-main.c
                 usb-stack.c
                 usb_descriptors.c
         )
 
 # For testing, we echo a lot of stuff to the serial console (output only). Will probably be removed in due course!
-pico_enable_stdio_uart(kb_test 1)
+pico_enable_stdio_uart(sharpFWkbd 1)
 
 # Where do we need to look to find stuff?
-target_include_directories(kb_test PRIVATE ${CMAKE_CURRENT_LIST_DIR})
+target_include_directories(sharpFWkbd PRIVATE ${CMAKE_CURRENT_LIST_DIR})
 
 # Pull in pico_stdlib which aggregates commonly used features, also multicore and tinyusb are needed
-target_link_libraries(kb_test PRIVATE pico_stdlib pico_multicore pico_unique_id tinyusb_device tinyusb_board)
+target_link_libraries(sharpFWkbd PRIVATE pico_stdlib pico_multicore pico_unique_id tinyusb_device tinyusb_board)
 
 # create map/bin/hex/uf2 file etc.
-pico_add_extra_outputs(kb_test)
+pico_add_extra_outputs(sharpFWkbd)
 
 # add url via pico_set_program_url
-#example_auto_set_url(kb_test)
+#example_auto_set_url(sharpFWkbd)

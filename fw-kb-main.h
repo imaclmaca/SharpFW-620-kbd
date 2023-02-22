@@ -1,5 +1,5 @@
 /*
- * Header file for the Microwriter / CyKey keyboard emulation.
+ * Header file for the Sharp FontWriter 620 keycode martix decoder
  */
 
 #ifndef _KB_MAIN_H_

@@ -36,7 +36,7 @@
 
 // local parts
 #include "usb_descriptors.h"
-#include "kb-main.h"
+#include "fw-kb-main.h"
 
 /* Blink pattern */
 enum  {
