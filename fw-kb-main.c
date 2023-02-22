@@ -92,11 +92,24 @@ static uint8_t const int_codes_table [32] = {
     HID_KEY_ALT_LEFT // Can be a modifier
     };
 
+// "Special" keys and "code-2" (or code-II) keys
 #define CER (128) // Old 1252 code for Euro sign
 #define CAP (129) // Caps Lock
-#define GBP (130) // Old 1252 code for £ sign
-//#define WN2 (130) // WIN key (as a key)
+#define BSQ (130) // The FW has weird layout for square and curly brackets - this is for square
+#define BCR (131) // The FW has weird layout for square and curly brackets - this is for curly
+#define SSZ (132) // German hard-s
+#define YEN (133) // Yen
+#define CNT (134) // cent
+#define BKT (135) // single-backtick c/w umlaut modifier
+#define SPM (136) // section marker c/w plus/minus sign
+#define DEG (137) // degree modifier
+#define IEX (138) // Inverted exclamation mark, as in Spanish
+#define IQM (139) // Inverted question mark
+#define NSQ (140) // Spanish-style N/~ symbol Ñ
+#define CED (141) // Spanish-style C-cedilla symbol
+#define GBP (142) // Old 1252 code for £ sign
 
+// Modifier key codes
 #define BLK (200) // BLOCK modifier
 #define HLP (201) // HELP key
 #define CD2 (202) // Code-2 modifier
@@ -107,50 +120,44 @@ static uint8_t const int_codes_table [32] = {
 
 #define ROW_SZ  8
 #define COL_SZ 10
+
+// The basic keymap
 static __uint8_t key_table [ROW_SZ * COL_SZ] = {
-    0, '[', '-', 'p', ';', '\'', '0',   0, '/', BCK,
-  BSP,   0, '=', 'o', 'l',   0, '9',   0, '.', WIN,
-  FWD, _UP, PUP, 'i', 'k', _EC, '8',   0, ',', PDN,
-  'n', 'y', '6', 'u', 'j', 'h', '7', CRR, 'm',   0,
-  'b', 't', '5', 'r', 'f', 'g', '4', CTR, 'v',   0,
-  SPC, RTN, DEL, 'e', 'd', BLK, '3',   0, 'c', HLP,
-  DWN, DND, HOM, 'w', 's', CD2, '2',   0, 'x', ALT,
-    0, TAB, '`', 'q', 'a', CAP, '1', SHF, 'z',   0
+    0,  BSQ,  '-',  'p',  ';', '\'', '0',   0,  '/',  BCK,
+  BSP,    0,  '=',  'o',  'l',    0, '9',   0,  '.',  WIN,
+  FWD,  _UP,  PUP,  'i',  'k',  _EC, '8',   0,  ',',  PDN,
+  'n',  'y',  '6',  'u',  'j',  'h', '7', CRR,  'm',    0,
+  'b',  't',  '5',  'r',  'f',  'g', '4', CTR,  'v',    0,
+  SPC,  RTN,  DEL,  'e',  'd',  BLK, '3',   0,  'c',  HLP,
+  DWN,  DND,  HOM,  'w',  's',  CD2, '2',   0,  'x',  ALT,
+    0,  TAB,  '`',  'q',  'a',  CAP, '1', SHF,  'z',    0
 };
 
+// The basic keymap, but with the Function keys F1 - F10 mapped to the number keys
 static __uint8_t key_FN_table [ROW_SZ * COL_SZ] = {
-    0, '[', '-', 'p', ';', '\'', F10,   0, '/', BCK,
-  BSP,   0, '=', 'o', 'l',   0, F09,   0, '.', WIN,
-  FWD, _UP, PUP, 'i', 'k', _EC, F08,   0, ',', PDN,
-  'n', 'y', F06, 'u', 'j', 'h', F07, CRR, 'm',   0,
-  'b', 't', F05, 'r', 'f', 'g', F04, CTR, 'v',   0,
-  SPC, RTN, DEL, 'e', 'd', BLK, F03,   0, 'c', HLP,
-  DWN, DND, HOM, 'w', 's', CD2, F02,   0, 'x', ALT,
-    0, TAB, '`', 'q', 'a', CAP, F01, SHF, 'z',   0
+    0,  BSQ,  '-',  'p',  ';', '\'',  F10,    0,  '/',  BCK,
+  BSP,    0,  '=',  'o',  'l',    0,  F09,    0,  '.',  WIN,
+  FWD,  _UP,  PUP,  'i',  'k',  _EC,  F08,    0,  ',',  PDN,
+  'n',  'y',  F06,  'u',  'j',  'h',  F07,  CRR,  'm',    0,
+  'b',  't',  F05,  'r',  'f',  'g',  F04,  CTR,  'v',    0,
+  SPC,  RTN,  DEL,  'e',  'd',  BLK,  F03,    0,  'c',  HLP,
+  DWN,  DND,  HOM,  'w',  's',  CD2,  F02,    0,  'x',  ALT,
+    0,  TAB,  '`',  'q',  'a',  CAP,  F01,  SHF,  'z',    0
 };
 
+// The keymap with many (not all) of the Code-II keys mapped
 static __uint8_t key2_table [ROW_SZ * COL_SZ] = {
-    0, '{', '-', 'p', ';', '\\', '0',   0, '/', BCK,
-  BSP,   0, '=', 'o', 'l',   0, '9',   0, '.', WIN,
-  FWD, _UP, PUP, 'i', 'k', _EC, '8',   0, ',', PDN,
-  'n', 'y', '6', 'u', 'j', 'h', '7', CRR, 'm',   0,
-  'b', 't', '5', 'r', 'f', 'g', '4', CTR, 'v',   0,
-  SPC, RTN, DEL, 'e', 'd', BLK, '3',   0, 'c', HLP,
-  DWN, DND, HOM, 'w', 's', CD2, '2',   0, 'x', ALT,
-    0, TAB, B_P, 'q', 'a', CAP, '1', SHF, 'z',   0
+    0,  BCR,  BKT,  'p',  NSQ, '\\',  '0',    0,  CED,  BCK,
+  BSP,    0,  SPM,  'o',  'l',    0,  DEG,    0,  IQM,  WIN,
+  FWD,  _UP,  PUP,  'i',  'k',  _EC,  '8',    0,  IEX,  PDN,
+  'n',  'y',  CNT,  'u',  'j',  'h',  '7',  CRR,  'm',    0,
+  'b',  't',  YEN,  'r',  'f',  'g',  SSZ,  CTR,  'v',    0,
+  SPC,  RTN,  DEL,  'e',  'd',  BLK,  CER,    0,  'c',  HLP,
+  DWN,  DND,  HOM,  'w',  's',  CD2,  '2',    0,  'x',  ALT,
+    0,  TAB,  B_P,  'q',  'a',  CAP,  '1',  SHF,  'z',    0
 };
 
-// static __uint8_t key_shift [ROW_SZ * COL_SZ] = {
-//     0, '{', '_', 'P', ':', '@', ')',   0, '?', BCK,
-//   BSP,   0, '+', 'O', 'L',   0, '(',   0, '>', WIN,
-//   FWD, _UP, PUP, 'I', 'K', _EC, '*',   0, '<', PDN,
-//   'N', 'Y', '^', 'U', 'J', 'H', '&', CRR, 'M',   0,
-//   'B', 'T', '%', 'R', 'F', 'G', '$', CTR, 'V',   0,
-//   SPC, RTN, DEL, 'E', 'D', BLK, GBP,   0, 'C', HLP,
-//   DWN, DND, HOM, 'W', 'S', CD2, '"',   0, 'X', ALT,
-//     0, TAB, BOX, 'Q', 'A', CAP, '!', SHF, 'Z',   0
-// };
-
+// Table to "quickly" spot the modifier keys
 static __uint8_t is_mod_key [ROW_SZ * COL_SZ] = {
   0, 0, 0, 0, 0,   0, 0,   0, 0,   0,
   0, 0, 0, 0, 0,   0, 0,   0, 0, WIN,
@@ -170,11 +177,8 @@ static __uint8_t cur_scan [COL_SZ]; // keys down on this scan
 
 int g_holding = 0;
 
-// static int do_debug = 0;
-// static uint32_t start_ms;
-
 // circular buffer for key-codes, pending sending...
-#define KC_SZ 8
+#define KC_SZ 16
 #define KC_MSK (KC_SZ - 1)
 static uint32_t kc_buf [KC_SZ];
 static uint32_t kc_in  = 0;
@@ -205,73 +209,16 @@ uint32_t kc_get (void)
     return uv;
 }
 
-#if 0
-// Testing support - make each sequence into printable ASCII for debug
-static char make_printable (const unsigned char cc)
-{
-    unsigned char cr = cc;
-    if (cr == RTN)
-    {
-        // No special action
-    }
-    else if (cr == KPE)
-    {
-        cr = RTN; // emit as RTN
-    }
-    else if (cr == BSP)
-    {
-        printf ("\b "); // erase previous
-        cr = '\b';
-    }
-    else if (cr < SPC)
-    {
-        cr = '.'; // elide unprintable characters
-    }
-    else if (cr == CER)
-    {
-        cr = '*';
-    }
-    else if ((cr == WIN) || (cr == WN2)) // trap WIN key modifier
-    {
-        cr = 'W';
-    }
-    else if (cr == BLK)
-    {
-        cr = 'B';
-    }
-    else if (cr == HLP)
-    {
-        cr = 'H';
-    }
-    else if (cr == CD2)
-    {
-        cr = '2';
-    }
-    else if (cr == CAP)
-    {
-        cr = 'C';
-    }
-    else if (cr == SHF)
-    {
-        cr = 'S';
-    }
-    else if (cr >= BLK)
-    {
-        cr = '*';
-    }
-
-    return cr;
-} // make_printable
-#endif
-
 static void process_keys (void)
 {
     uint8_t Mods = 0;
     uint8_t Kcode = 0;
 
     msg_blk code;
+    msg_blk code_alt;
     int code_idx = 2;
     code.u_msg = 0; // Clear all the bytes in the union
+    code_alt.u_msg = 0; // Clear all the bytes in the union
 
     __uint8_t *pTable = key_table;
     // Pick the active keys out of the keymap
@@ -339,24 +286,23 @@ static void process_keys (void)
                 ucode = HID_KEY_CONTROL_LEFT;
                 break;
 
-                case HLP:
+                case HLP: // HELP is pressed, map the Function keymap instead
                 pTable = key_FN_table;
                 break;
 
-                case CD2:
+                case CD2: // Code-II is pressed, amp the code-II keymap
                 pTable = key2_table;
                 break;
 
-                case BLK:
+                case BLK: // Not used at present
                 // is_BLK
                 default:
                 break;
             }
 
-            if ((ucode != 0) && (code_idx >= 0) ) // && (i_keys == 1))
+            // queue up modifier for sending (if it is an active key)
+            if ((ucode != 0) && (code_idx >= 0) )
             {
-                /* only the MODIFIER key is pressed, send it as a key
-                 * rather than only as a modifier*/
                 code.p[code_idx] = Kcode = ucode;
                 --code_idx;
             }
@@ -366,9 +312,6 @@ static void process_keys (void)
     }
 
     if ((i_keys - is_mod) > 1) return; // Too many keys are down...
-    // do something about modified keys
-    // Detect and "fix" the code-2 and FN key mappings etc...
-    // is_hlp is_BLK is_code2
 
     // Emit the processed keys to the USB queue
     for (idx = 0; idx < i_keys; ++idx)
@@ -378,7 +321,7 @@ static void process_keys (void)
         {
             if (kc < SPC)
             {
-                // Some sort of internal key - determine which...
+                // Some "internal" key - determine which...
                 Kcode = int_codes_table [kc];
                 if (code_idx >= 0)
                 {
@@ -404,16 +347,299 @@ static void process_keys (void)
                 uint8_t ucode = 0;
                 switch (kc)
                 {
-                    case CER:
-                    Mods |= KEYBOARD_MODIFIER_RIGHTALT;
-                    ucode = HID_KEY_4; // AlrGr + 4 works for UK layouts...
+                    case CER: // Euro currency symbol
+                    {
+                        if ((Mods & KEYBOARD_MODIFIER_LEFTSHIFT) != 0)
+                        {
+                            Mods = KEYBOARD_MODIFIER_RIGHTALT;
+                            ucode = HID_KEY_4; // AlrGr + 4 works for UK layouts...
+                        }
+                        else
+                        {
+                            ucode = HID_KEY_3;
+                        }
+                    }
                     break;
 
-                    case CAP:
+                    case CAP: // Caps Lock key
                     ucode = HID_KEY_CAPS_LOCK;
                     break;
 
-                    case GBP:
+                    case BSQ: // Square brackets
+                    {
+                        if ((Mods & KEYBOARD_MODIFIER_LEFTSHIFT) != 0)
+                        {
+                            /* Shift is set: on a std UK kbd this produces "{"
+                             * but here we want to produce "]" instead. */
+                            Mods &= ~(KEYBOARD_MODIFIER_LEFTSHIFT); // clear the shift modifier
+                            ucode = HID_KEY_BRACKET_RIGHT;
+                        }
+                        else
+                        {
+                            ucode = HID_KEY_BRACKET_LEFT;
+                        }
+                    }
+                    break;
+
+                    case BCR: // Curly brackets
+                    {
+                        if ((Mods & KEYBOARD_MODIFIER_LEFTSHIFT) != 0)
+                        {
+                            /* We want "}" here, which is SHIFT + HID_KEY_BRACKET_RIGHT
+                             * on a std UK kbd. */
+                            ucode = HID_KEY_BRACKET_RIGHT;
+                        }
+                        else
+                        {
+                            /* We want "{" here, which is SHIFT + HID_KEY_BRACKET_LEFT
+                             * on a std UK kbd. */
+                            Mods |= KEYBOARD_MODIFIER_LEFTSHIFT;
+                            ucode = HID_KEY_BRACKET_LEFT;
+                        }
+                    }
+                    break;
+
+                    case SSZ: // German-style sharp-S
+                    {
+                        if ((Mods & KEYBOARD_MODIFIER_LEFTSHIFT) != 0)
+                        {
+                            Mods = KEYBOARD_MODIFIER_RIGHTALT;
+                            code.p[2] = HID_KEY_ALT_RIGHT;
+                            code_idx = 1;
+                            ucode = HID_KEY_S; // AlrGr + s works for UK layouts...
+                        }
+                        else
+                        {
+                            ucode = HID_KEY_4;
+                        }
+                    }
+                    break;
+
+                    case YEN: // Japanese Yen symbol
+                    {
+                        if ((Mods & KEYBOARD_MODIFIER_LEFTSHIFT) != 0)
+                        {
+                            code_alt.p[3] = KEYBOARD_MODIFIER_RIGHTALT;
+                            code_alt.p[2] = HID_KEY_ALT_RIGHT;
+                            if (multicore_fifo_wready ())
+                            {
+                                multicore_fifo_push_blocking (code_alt.u_msg);
+                            }
+
+                            Mods |= KEYBOARD_MODIFIER_RIGHTALT;
+                            code.p[2] = HID_KEY_Y;
+                            code.p[1] = HID_KEY_ALT_RIGHT;
+                            code_idx = 0;
+                            ucode = HID_KEY_SHIFT_LEFT; // AlrGr + shift + y works for UK layouts...
+                        }
+                        else
+                        {
+                            ucode = HID_KEY_5;
+                        }
+                    }
+                    break;
+
+                    case CNT: // Cent currency symbol
+                    {
+                        if ((Mods & KEYBOARD_MODIFIER_LEFTSHIFT) != 0)
+                        {
+                            Mods = KEYBOARD_MODIFIER_RIGHTALT;
+                            code.p[2] = HID_KEY_ALT_RIGHT;
+                            code_idx = 1;
+                            ucode = HID_KEY_C; // AlrGr + c works for UK layouts...
+                        }
+                        else
+                        {
+                            ucode = HID_KEY_6;
+                        }
+                    }
+                    break;
+
+                    case BKT: // (Single) Backtick c/w Umlaut modifier
+                    {
+                        if ((Mods & KEYBOARD_MODIFIER_LEFTSHIFT) != 0)
+                        {
+                            // Umlaut case (might be a dead-key option?)
+                            Mods = KEYBOARD_MODIFIER_RIGHTALT;
+                            code.p[2] = HID_KEY_ALT_RIGHT;
+                            code_idx = 1;
+                            ucode = HID_KEY_BRACKET_LEFT; // AlrGr + [ works for UK layouts...
+                        }
+                        else
+                        {
+                            // single backtick
+                            code_alt.p[3] = KEYBOARD_MODIFIER_RIGHTALT;
+                            code_alt.p[2] = HID_KEY_ALT_RIGHT;
+                            if (multicore_fifo_wready ())
+                            {
+                                multicore_fifo_push_blocking (code_alt.u_msg);
+                            }
+
+                            Mods |= KEYBOARD_MODIFIER_RIGHTALT | KEYBOARD_MODIFIER_LEFTSHIFT;
+                            code.p[2] = HID_KEY_B;
+                            code.p[1] = HID_KEY_ALT_RIGHT;
+                            code_idx = 0;
+                            ucode = HID_KEY_SHIFT_LEFT; // AlrGr + shift + b works for UK layouts...
+                        }
+                    }
+                    break;
+
+                    case IEX: // Spanish-style inverted exclamation mark
+                    {
+                        if ((Mods & KEYBOARD_MODIFIER_LEFTSHIFT) != 0)
+                        {
+                            code_alt.p[3] = KEYBOARD_MODIFIER_RIGHTALT;
+                            code_alt.p[2] = HID_KEY_ALT_RIGHT;
+                            if (multicore_fifo_wready ())
+                            {
+                                multicore_fifo_push_blocking (code_alt.u_msg);
+                            }
+
+                            Mods |= KEYBOARD_MODIFIER_RIGHTALT | KEYBOARD_MODIFIER_LEFTSHIFT;
+                            code.p[2] = HID_KEY_1;
+                            code.p[1] = HID_KEY_ALT_RIGHT;
+                            code_idx = 0;
+                            ucode = HID_KEY_SHIFT_LEFT; // AlrGr + shift + 1 works for UK layouts...
+                        }
+                        else
+                        {
+                            ucode = HID_KEY_COMMA;
+                        }
+                    }
+                    break;
+
+                    case IQM: // Spanish-style inverted question mark
+                    {
+                        if ((Mods & KEYBOARD_MODIFIER_LEFTSHIFT) != 0)
+                        {
+                            code_alt.p[3] = KEYBOARD_MODIFIER_RIGHTALT;
+                            code_alt.p[2] = HID_KEY_ALT_RIGHT;
+                            if (multicore_fifo_wready ())
+                            {
+                                multicore_fifo_push_blocking (code_alt.u_msg);
+                            }
+
+                            Mods |= KEYBOARD_MODIFIER_RIGHTALT | KEYBOARD_MODIFIER_LEFTSHIFT;
+                            code.p[2] = HID_KEY_MINUS;
+                            code.p[1] = HID_KEY_ALT_RIGHT;
+                            code_idx = 0;
+                            ucode = HID_KEY_SHIFT_LEFT; // AlrGr + shift + "-" works for UK layouts...
+                        }
+                        else
+                        {
+                            ucode = HID_KEY_PERIOD;
+                        }
+                    }
+                    break;
+
+                    case SPM: // Section-mark c/w plus/minus symbol
+                    {
+                        if ((Mods & KEYBOARD_MODIFIER_LEFTSHIFT) != 0)
+                        {
+                            code_alt.p[3] = KEYBOARD_MODIFIER_RIGHTALT;
+                            code_alt.p[2] = HID_KEY_ALT_RIGHT;
+                            if (multicore_fifo_wready ())
+                            {
+                                multicore_fifo_push_blocking (code_alt.u_msg);
+                            }
+
+                            Mods |= KEYBOARD_MODIFIER_RIGHTALT | KEYBOARD_MODIFIER_LEFTSHIFT;
+                            code.p[2] = HID_KEY_9;
+                            code.p[1] = HID_KEY_ALT_RIGHT;
+                            code_idx = 0;
+                            ucode = HID_KEY_SHIFT_LEFT; // AlrGr + shift + 9 works for UK layouts...
+                        }
+                        else
+                        {
+                            code_alt.p[3] = KEYBOARD_MODIFIER_RIGHTALT;
+                            code_alt.p[2] = HID_KEY_ALT_RIGHT;
+                            if (multicore_fifo_wready ())
+                            {
+                                multicore_fifo_push_blocking (code_alt.u_msg);
+                            }
+
+                            Mods = KEYBOARD_MODIFIER_RIGHTALT | KEYBOARD_MODIFIER_LEFTSHIFT;
+                            code.p[2] = HID_KEY_S;
+                            code.p[1] = HID_KEY_ALT_RIGHT;
+                            code_idx = 0;
+                            ucode = HID_KEY_SHIFT_LEFT; // AlrGr + shift + s works for UK layouts...
+                        }
+                    }
+                    break;
+
+                    case DEG: // Degree symbol
+                    {
+                        if ((Mods & KEYBOARD_MODIFIER_LEFTSHIFT) != 0)
+                        {
+                            code_alt.p[3] = KEYBOARD_MODIFIER_RIGHTALT;
+                            code_alt.p[2] = HID_KEY_ALT_RIGHT;
+                            if (multicore_fifo_wready ())
+                            {
+                                multicore_fifo_push_blocking (code_alt.u_msg);
+                            }
+
+                            Mods |= KEYBOARD_MODIFIER_RIGHTALT | KEYBOARD_MODIFIER_LEFTSHIFT;
+                            code.p[2] = HID_KEY_0;
+                            code.p[1] = HID_KEY_ALT_RIGHT;
+                            code_idx = 0;
+                            ucode = HID_KEY_SHIFT_LEFT; // AlrGr + shift + 0 works for UK layouts...
+                        }
+                        else
+                        {
+                            ucode = HID_KEY_9;
+                        }
+                    }
+                    break;
+
+                    case NSQ: // Spanish style N~ combo char Ñ or ñ here.
+                    {
+                        // send the dead-key first
+                        code_alt.p[3] = KEYBOARD_MODIFIER_RIGHTALT;
+                        code_alt.p[2] = HID_KEY_BRACKET_RIGHT;
+                        code_alt.p[1] = HID_KEY_ALT_RIGHT;
+                        if (multicore_fifo_wready ())
+                        {
+                            multicore_fifo_push_blocking (code_alt.u_msg);
+                        }
+
+                        if ((Mods & KEYBOARD_MODIFIER_LEFTSHIFT) != 0)
+                        {
+                            code.p[2] = HID_KEY_N;
+                            code_idx = 1;
+                            ucode = HID_KEY_SHIFT_LEFT;
+                        }
+                        else
+                        {
+                            ucode = HID_KEY_N;
+                        }
+                    }
+                    break;
+
+                    case CED: // Spanish style C-deilla combo char ç or Ç here.
+                    {
+                        // send the dead-key first
+                        code_alt.p[3] = KEYBOARD_MODIFIER_RIGHTALT;
+                        code_alt.p[2] = HID_KEY_EQUAL;
+                        code_alt.p[1] = HID_KEY_ALT_RIGHT;
+                        if (multicore_fifo_wready ())
+                        {
+                            multicore_fifo_push_blocking (code_alt.u_msg);
+                        }
+
+                        if ((Mods & KEYBOARD_MODIFIER_LEFTSHIFT) != 0)
+                        {
+                            code.p[2] = HID_KEY_C;
+                            code_idx = 1;
+                            ucode = HID_KEY_SHIFT_LEFT;
+                        }
+                        else
+                        {
+                            ucode = HID_KEY_C;
+                        }
+                    }
+                    break;
+
+                    case GBP: // This is not actually used, it is just a sentinel for the range, really!
                     Mods |= KEYBOARD_MODIFIER_LEFTSHIFT;
                     ucode = HID_KEY_3; // Shift-3 is correct for UK layouts
                     break;
@@ -443,7 +669,7 @@ static void process_keys (void)
 
 /* The "main" task on the second core.
  * This manages the reading and initial decoding of the keyboard matrix. */
-void main_task (void)
+void scan_thread (void)
 {
     // signal to the primary thread that this worker thread is ready
     multicore_fifo_push_blocking (99);
@@ -491,7 +717,7 @@ void main_task (void)
             sel_line = 0;
         }
     }
-} // main_task
+} // scan_thread
 
 // main - initialize the board, start tinyusb, start the worker thread
 int main()
@@ -545,14 +771,12 @@ int main()
 
     tusb_init(); // start tinyusb
 
-//    start_ms = board_millis() + 1000;
-
     stdio_init_all();
 
     printf ("\n-- Keyboard test starting --\n");
 
     // Start the keyboard scanner thread on core-1
-    multicore_launch_core1 (main_task);
+    multicore_launch_core1 (scan_thread);
     // Wait for it to start up
     uint32_t g = multicore_fifo_pop_blocking();
 
