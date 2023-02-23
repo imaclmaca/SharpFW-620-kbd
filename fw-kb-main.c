@@ -1,6 +1,6 @@
-/* Entry point for the Sharp FontWriter 620 keycode martix decoder */
+/* Entry point for the Sharp FontWriter 620 keyboard matrix decoder */
 
-// Basics to get the pico going...
+// Basics to get the Pico going...
 #include <stdio.h>
 #include "pico/stdlib.h"
 #include "pico/multicore.h"
@@ -46,7 +46,7 @@
 #define F10  (FNK + 10) // 20
 #define F11  (FNK + 11)
 #define F12  (FNK + 12) // 22
-#define B_P  (23)  // Special that remaps to backslash / pipe on UK layouts
+#define B_P  (23)  // Special that re-maps to backslash / pipe on UK layouts
 #define HOM  (24)  // HOME
 #define BCK  (25)  // Cursor BACK (LEFT)
 #define DND  (26)  // Document END
@@ -81,7 +81,7 @@ static uint8_t const int_codes_table [32] = {
     HID_KEY_F10,
     HID_KEY_F11,
     HID_KEY_F12,
-    HID_KEY_EUROPE_2, // 23 - Special that remaps to backslash / pipe on UK layouts
+    HID_KEY_EUROPE_2, // 23 - Special that re-maps to backslash / pipe on UK layouts
     HID_KEY_HOME,
     HID_KEY_ARROW_LEFT,
     HID_KEY_END,
@@ -93,7 +93,7 @@ static uint8_t const int_codes_table [32] = {
     };
 
 // "Special" keys and "code-2" (or code-II) keys
-#define CER (128) // Old 1252 code for Euro sign
+#define CER (128) // Old 1252 code for Euro sign €
 #define CAP (129) // Caps Lock
 #define BSQ (130) // The FW has weird layout for square and curly brackets - this is for square
 #define BCR (131) // The FW has weird layout for square and curly brackets - this is for curly
@@ -209,15 +209,18 @@ uint32_t kc_get (void)
     return uv;
 }
 
+/* Process the key matrix to determine which keys are pressed
+ * and decide what to send to the USB stack. */
 static void process_keys (void)
 {
-    uint8_t Mods = 0;
-    uint8_t Kcode = 0;
+    uint8_t Mods  = 0; // Which modifier bits are set
+    uint8_t Kcode = 0; // What is the current key code
 
-    msg_blk code;
-    msg_blk code_alt;
-    int code_idx = 2;
-    code.u_msg = 0; // Clear all the bytes in the union
+    msg_blk code;     // Holds the USB code to be sent for this key
+    msg_blk code_alt; // Holds an additional USB code, e.g. for sending composed keys
+    int code_idx = 2; // Records how many "slots" have been used in msg_blk code
+
+    code.u_msg = 0;     // Clear all the bytes in the union
     code_alt.u_msg = 0; // Clear all the bytes in the union
 
     __uint8_t *pTable = key_table;
@@ -225,6 +228,8 @@ static void process_keys (void)
     int col;
     int row;
     int idx;
+
+    // Scan the matrix for (at most) 4 pressed keys. In practice we reject any more than 3.
 #define MX_KEYS 4
     int keys[MX_KEYS];
     int i_keys = 0;
@@ -249,9 +254,9 @@ static void process_keys (void)
     // Were any valid keys found?
     if (i_keys < 1) return;
 
-    // is there a modifier set?
+    /* Is there a modifier set? Scan the set for any modifiers first,
+     * before we try to interpret any "normal" keys. */
     int is_mod = 0;
-
     for (idx = 0; idx < i_keys; ++idx)
     {
         __uint8_t kc = is_mod_key [keys[idx]];
@@ -290,7 +295,7 @@ static void process_keys (void)
                 pTable = key_FN_table;
                 break;
 
-                case CD2: // Code-II is pressed, amp the code-II keymap
+                case CD2: // Code-II is pressed, map the code-II keymap
                 pTable = key2_table;
                 break;
 
@@ -313,7 +318,7 @@ static void process_keys (void)
 
     if ((i_keys - is_mod) > 1) return; // Too many keys are down...
 
-    // Emit the processed keys to the USB queue
+    // Scan for the remaining key and interpret it, then emit the processed key(s) to the USB queue
     for (idx = 0; idx < i_keys; ++idx)
     {
         __uint8_t kc = pTable [keys[idx]];
@@ -347,7 +352,7 @@ static void process_keys (void)
                 uint8_t ucode = 0;
                 switch (kc)
                 {
-                    case CER: // Euro currency symbol
+                    case CER: // Euro currency symbol €
                     {
                         if ((Mods & KEYBOARD_MODIFIER_LEFTSHIFT) != 0)
                         {
@@ -365,7 +370,7 @@ static void process_keys (void)
                     ucode = HID_KEY_CAPS_LOCK;
                     break;
 
-                    case BSQ: // Square brackets
+                    case BSQ: // Square brackets [ and ]
                     {
                         if ((Mods & KEYBOARD_MODIFIER_LEFTSHIFT) != 0)
                         {
@@ -381,7 +386,7 @@ static void process_keys (void)
                     }
                     break;
 
-                    case BCR: // Curly brackets
+                    case BCR: // Curly brackets { and }
                     {
                         if ((Mods & KEYBOARD_MODIFIER_LEFTSHIFT) != 0)
                         {
@@ -459,7 +464,7 @@ static void process_keys (void)
                     {
                         if ((Mods & KEYBOARD_MODIFIER_LEFTSHIFT) != 0)
                         {
-                            // Umlaut case (might be a dead-key option?)
+                            // Umlaut case (a dead-key option)
                             Mods = KEYBOARD_MODIFIER_RIGHTALT;
                             code.p[2] = HID_KEY_ALT_RIGHT;
                             code_idx = 1;
@@ -591,9 +596,9 @@ static void process_keys (void)
                     }
                     break;
 
-                    case NSQ: // Spanish style N~ combo char Ñ or ñ here.
+                    case NSQ: // Spanish style combo char Ñ or ñ here.
                     {
-                        // send the dead-key first
+                        // send the dead-key first (ALT + "]" here)
                         code_alt.p[3] = KEYBOARD_MODIFIER_RIGHTALT;
                         code_alt.p[2] = HID_KEY_BRACKET_RIGHT;
                         code_alt.p[1] = HID_KEY_ALT_RIGHT;
@@ -615,9 +620,9 @@ static void process_keys (void)
                     }
                     break;
 
-                    case CED: // Spanish style C-deilla combo char ç or Ç here.
+                    case CED: // Spanish style C-cedilla combo char ç or Ç here.
                     {
-                        // send the dead-key first
+                        // send the dead-key first (ALT + "=" here)
                         code_alt.p[3] = KEYBOARD_MODIFIER_RIGHTALT;
                         code_alt.p[2] = HID_KEY_EQUAL;
                         code_alt.p[1] = HID_KEY_ALT_RIGHT;
@@ -676,17 +681,17 @@ void scan_thread (void)
 
 #define ROW_MASK 0x00FF
 
-    int sel_line = 0;
+    int sel_line = 0; // For columns 0 to 9 (10 lines)
     while (true)
     {
-        unsigned set_ln = sel_line + 2;
+        unsigned set_ln = sel_line + 2; // Our "column 0" is GPIO line 2
 
         gpio_set_dir(set_ln, GPIO_OUT);
         gpio_put (set_ln, 0); // Drive test line low
         // sleep_ms (1);
         sleep_us (600);
 
-        unsigned u_row = gpio_get_all ();
+        unsigned u_row = gpio_get_all (); // Read the 8 rows (GPIO lines 12 to 19)
         u_row = (u_row >> 12) & ROW_MASK;
 
         cur_scan [sel_line] = (__uint8_t)u_row;
@@ -698,7 +703,7 @@ void scan_thread (void)
         gpio_set_dir(set_ln, GPIO_IN);
         gpio_pull_up (set_ln);
 
-        ++sel_line;
+        ++sel_line; // Next column
         if (sel_line >= COL_SZ) // we have scanned all the lines
         {
             // Did a key change?
@@ -711,7 +716,7 @@ void scan_thread (void)
                 // Record the new state
                 memcpy (prv_scan, cur_scan, COL_SZ);
             }
-            else
+            else // No change, hold the keys (this is a bit of a hack, TBH...)
             {
                 g_holding = 1;
             }
@@ -727,9 +732,10 @@ int main()
     board_init();
 
     // Try to grab the Pico board ID info.
-    pico_unique_board_id_t id_out;
-    pico_get_unique_board_id (&id_out);
+//    pico_unique_board_id_t id_out;
+//    pico_get_unique_board_id (&id_out);
 
+    // Query the Pico serial number and use that to populate the serial number of the USB status
     char id_string [(2 * PICO_UNIQUE_BOARD_ID_SIZE_BYTES) + 1]; // Should be 17 - PICO_UNIQUE_BOARD_ID_SIZE_BYTES == 8
     pico_get_unique_board_id_string (id_string, 17);
 
@@ -752,7 +758,7 @@ int main()
     }
 
     // GPIO pins 12 to 19 (8 pins) test the rows
-    // These are pulled high but driven low to select a row
+    // These are pulled high
     for (idx = 12; idx <= 19; ++idx)
     {
         gpio_init (idx);
@@ -760,26 +766,26 @@ int main()
         gpio_pull_up (idx);
     }
 
-    // Clear the prev and current kbd scan states
+    // Clear the previous and current keyboard scan states
     for (idx = 0; idx < COL_SZ; ++idx)
     {
-        prv_scan [idx] = 0;
+        prv_scan [idx] = 0; // previous scan
     }
 
     for (idx = 0; idx < COL_SZ; ++idx)
     {
-        cur_scan [idx] = 0;
+        cur_scan [idx] = 0; // current scan
     }
 
     tusb_init(); // start tinyusb
 
-    stdio_init_all();
+    stdio_init_all(); // Enable the Pico serial port
 
     printf ("\n-- Keyboard test starting --\n");
 
     // Start the keyboard scanner thread on core-1
     multicore_launch_core1 (scan_thread);
-    // Wait for it to start up
+    // Wait for scan_thread() to start up
     uint32_t g = multicore_fifo_pop_blocking();
 
     // cursory check that core-1 started OK

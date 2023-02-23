@@ -40,7 +40,7 @@
 
 /* Blink pattern */
 enum  {
-  BLINK_NONE = 0,
+  BLINK_NONE = 0,  // We do this when Caps Lock is set, to turn the light "always on"
   BLINK_NOT_MOUNTED,
   BLINK_MOUNTED,
   BLINK_SUSPENDED
@@ -142,7 +142,7 @@ static void send_hid_report(uint8_t report_id, uint32_t btn)
   }
 } // send_hid_report
 
-// Every 10ms, we will send 1 report for each HID profile (keyboard, mouse etc.)
+// Every PW_POLL period, we will send 1 report for each HID profile (keyboard, mouse etc.)
 // tud_hid_report_complete_cb() is used to send the next report after previous one is complete
 void hid_task(void)
 {
@@ -204,9 +204,7 @@ uint16_t tud_hid_get_report_cb(uint8_t instance, uint8_t report_id, hid_report_t
 /* Invoked when we received SET_REPORT control request or
  * receive data on OUT endpoint ( Report ID = 0, Type = 0 )
  *
- * Here, this is only checking for the CapsLock message from the host,
- * which PicoWriter ignores at present - though it possibly could make
- * use of it.
+ * Here, this is only checking for the CapsLock message from the host.
  * All this does is change the board LED, in effect.
  */
 void tud_hid_set_report_cb(uint8_t instance, uint8_t report_id, hid_report_type_t report_type,
@@ -216,7 +214,7 @@ void tud_hid_set_report_cb(uint8_t instance, uint8_t report_id, hid_report_type_
 
   if (report_type == HID_REPORT_TYPE_OUTPUT)
   {
-    // Set keyboard LED e.g Capslock in this case - which we do not currently even use!
+    // Set keyboard LED e.g Caps Lock in this case
     if (report_id == REPORT_ID_KEYBOARD)
     {
       // bufsize should be (at least) 1
@@ -248,7 +246,7 @@ void led_blinking_task(void)
   static uint32_t start_ms = 0;
   static int led_state = 0;
 
-  // blink is disabled - typically happens when CapsLock is set ON by tud_hid_set_report_cb()
+  // blink is disabled - typically happens when Caps Lock is set ON by tud_hid_set_report_cb()
   if (BLINK_NONE == blink_state) return;
 
   const uint16_t *seq = NULL;
