@@ -97,17 +97,22 @@ static uint8_t const int_codes_table [32] = {
 #define CAP (129) // Caps Lock
 #define BSQ (130) // The FW has weird layout for square and curly brackets - this is for square
 #define BCR (131) // The FW has weird layout for square and curly brackets - this is for curly
-#define SSZ (132) // German hard-s
-#define YEN (133) // Yen
-#define CNT (134) // cent
-#define BKT (135) // single-backtick c/w umlaut modifier
-#define SPM (136) // section marker c/w plus/minus sign
-#define DEG (137) // degree modifier
-#define IEX (138) // Inverted exclamation mark, as in Spanish
-#define IQM (139) // Inverted question mark
+#define SSZ (132) // German hard-s ß
+#define YEN (133) // Yen  ¥
+#define CNT (134) // cent ¢
+#define BKT (135) // single-backtick c/w umlaut modifier ’ and ¨
+#define SPM (136) // section marker c/w plus/minus sign § / ±
+#define DEG (137) // degree modifier °
+#define IEX (138) // Inverted exclamation mark, as in Spanish ¡
+#define IQM (139) // Inverted question mark ¿
 #define NSQ (140) // Spanish-style N/~ symbol Ñ
-#define CED (141) // Spanish-style C-cedilla symbol
-#define GBP (142) // Old 1252 code for £ sign
+#define CED (141) // Spanish-style C-cedilla symbol ç or Ç
+#define OHM (142) // Ohms symbol - actually o with underscore on kbd
+#define Aac (143) // A-acute á
+#define Egr (144) // E-grave è
+#define Ugr (145) // U-grave ù
+#define Agr (146) // A-grave à
+#define GBP (147) // Code for the GBP £ sign
 
 // Modifier key codes
 #define BLK (200) // BLOCK modifier
@@ -147,14 +152,14 @@ static __uint8_t key_FN_table [ROW_SZ * COL_SZ] = {
 
 // The keymap with many (not all) of the Code-II keys mapped
 static __uint8_t key2_table [ROW_SZ * COL_SZ] = {
-    0,  BCR,  BKT,  'p',  NSQ, '\\',  '0',    0,  CED,  BCK,
+    0,  BCR,  BKT,  'p',  NSQ, '\\',  Agr,    0,  CED,  BCK,
   BSP,    0,  SPM,  'o',  'l',    0,  DEG,    0,  IQM,  WIN,
-  FWD,  _UP,  PUP,  'i',  'k',  _EC,  '8',    0,  IEX,  PDN,
-  'n',  'y',  CNT,  'u',  'j',  'h',  '7',  CRR,  'm',    0,
+  FWD,  _UP,  PUP,  'i',  'k',  _EC,  Ugr,    0,  IEX,  PDN,
+  'n',  'y',  CNT,  'u',  'j',  'h',  Egr,  CRR,  'm',    0,
   'b',  't',  YEN,  'r',  'f',  'g',  SSZ,  CTR,  'v',    0,
   SPC,  RTN,  DEL,  'e',  'd',  BLK,  CER,    0,  'c',  HLP,
-  DWN,  DND,  HOM,  'w',  's',  CD2,  '2',    0,  'x',  ALT,
-    0,  TAB,  B_P,  'q',  'a',  CAP,  '1',  SHF,  'z',    0
+  DWN,  DND,  HOM,  'w',  's',  CD2,  Aac,    0,  'x',  ALT,
+    0,  TAB,  B_P,  'q',  'a',  CAP,  OHM,  SHF,  'z',    0
 };
 
 // Table to "quickly" spot the modifier keys
@@ -228,6 +233,9 @@ static void process_keys (int all_keys_up)
     int idx;
 
     // Scan the matrix for (at most) 4 pressed keys. In practice we reject any more than 3.
+    // Note that the Fontwriter matrix can be prone to shadow keys even with only 3 held
+    // down, and in any case my use of the Pico multicore FIFO limits me to 3-keys and a
+    // modifier flags byte.
 #define MX_KEYS 4
     int keys[MX_KEYS];
     int i_keys = 0;
@@ -236,7 +244,7 @@ static void process_keys (int all_keys_up)
         // Is any key down on this column?
         if (ROW_MASK == cur_scan[col])
         {
-            // All keys are UP
+            // All keys are UP in this column, no further check.
         }
         else // There must be at least 1 bit down, find it now
         {
@@ -267,7 +275,6 @@ static void process_keys (int all_keys_up)
             if (multicore_fifo_wready ())
             {
                 multicore_fifo_push_blocking (FLAG_ALL_UP);
-                all_keys_up = 0;
             }
         }
         return; // No more keys to process
@@ -286,7 +293,7 @@ static void process_keys (int all_keys_up)
             switch (kc)
             {
                 case SHF:
-                Mods |= KEYBOARD_MODIFIER_LEFTSHIFT; //Shift key
+                Mods |= KEYBOARD_MODIFIER_LEFTSHIFT; // Shift key
                 ucode = HID_KEY_SHIFT_LEFT;
                 break;
 
@@ -335,7 +342,19 @@ static void process_keys (int all_keys_up)
         }
     }
 
-    if ((i_keys - is_mod) > 1) return; // Too many keys are down...
+    int keys_to_go = i_keys - is_mod; // How many keys are left held down?
+
+    // Are there any "active" keys left to process?
+    if ((keys_to_go < 1) && (Kcode == 0))
+    {
+        // No "active" key is down now, only inactive modifiers, so send a key up
+        if (multicore_fifo_wready ())
+        {
+            multicore_fifo_push_blocking (FLAG_ALL_UP);
+        }
+        return;
+    }
+    if (keys_to_go > 1) return; // Too many keys are down... bail out.
 
     // Scan for the remaining key and interpret it, then emit the processed key(s) to the USB queue
     for (idx = 0; idx < i_keys; ++idx)
@@ -423,7 +442,7 @@ static void process_keys (int all_keys_up)
                     }
                     break;
 
-                    case SSZ: // German-style sharp-S
+                    case SSZ: // German-style sharp-S ß
                     {
                         if ((Mods & KEYBOARD_MODIFIER_LEFTSHIFT) != 0)
                         {
@@ -439,7 +458,7 @@ static void process_keys (int all_keys_up)
                     }
                     break;
 
-                    case YEN: // Japanese Yen symbol
+                    case YEN: // Japanese Yen symbol ¥
                     {
                         if ((Mods & KEYBOARD_MODIFIER_LEFTSHIFT) != 0)
                         {
@@ -463,7 +482,7 @@ static void process_keys (int all_keys_up)
                     }
                     break;
 
-                    case CNT: // Cent currency symbol
+                    case CNT: // Cent currency symbol ¢
                     {
                         if ((Mods & KEYBOARD_MODIFIER_LEFTSHIFT) != 0)
                         {
@@ -508,7 +527,7 @@ static void process_keys (int all_keys_up)
                     }
                     break;
 
-                    case IEX: // Spanish-style inverted exclamation mark
+                    case IEX: // Spanish-style inverted exclamation mark ¡
                     {
                         if ((Mods & KEYBOARD_MODIFIER_LEFTSHIFT) != 0)
                         {
@@ -532,7 +551,7 @@ static void process_keys (int all_keys_up)
                     }
                     break;
 
-                    case IQM: // Spanish-style inverted question mark
+                    case IQM: // Spanish-style inverted question mark ¿
                     {
                         if ((Mods & KEYBOARD_MODIFIER_LEFTSHIFT) != 0)
                         {
@@ -556,7 +575,7 @@ static void process_keys (int all_keys_up)
                     }
                     break;
 
-                    case SPM: // Section-mark c/w plus/minus symbol
+                    case SPM: // Section-mark c/w plus/minus symbol § and ±
                     {
                         if ((Mods & KEYBOARD_MODIFIER_LEFTSHIFT) != 0)
                         {
@@ -591,7 +610,7 @@ static void process_keys (int all_keys_up)
                     }
                     break;
 
-                    case DEG: // Degree symbol
+                    case DEG: // Degree symbol °
                     {
                         if ((Mods & KEYBOARD_MODIFIER_LEFTSHIFT) != 0)
                         {
@@ -659,6 +678,122 @@ static void process_keys (int all_keys_up)
                         else
                         {
                             ucode = HID_KEY_C;
+                        }
+                    }
+                    break;
+
+                    case OHM: // Ohms symbol / Omega Ω
+                    {
+                        if ((Mods & KEYBOARD_MODIFIER_LEFTSHIFT) != 0)
+                        {
+                            code_alt.p[3] = KEYBOARD_MODIFIER_RIGHTALT;
+                            code_alt.p[2] = HID_KEY_ALT_RIGHT;
+                            if (multicore_fifo_wready ())
+                            {
+                                multicore_fifo_push_blocking (code_alt.u_msg);
+                            }
+
+                            Mods |= KEYBOARD_MODIFIER_RIGHTALT;
+                            code.p[2] = HID_KEY_Q;
+                            code.p[1] = HID_KEY_ALT_RIGHT;
+                            code_idx = 0;
+                            ucode = HID_KEY_SHIFT_LEFT; // AlrGr + shift + q works for UK layouts...
+                        }
+                        else
+                        {
+                            ucode = HID_KEY_1;
+                        }
+                    }
+                    break;
+
+                    case Aac: // A-acute á
+                    {
+                        if ((Mods & KEYBOARD_MODIFIER_LEFTSHIFT) != 0)
+                        {
+                            code_alt.p[3] = KEYBOARD_MODIFIER_RIGHTALT;
+                            code_alt.p[2] = HID_KEY_ALT_RIGHT;
+                            code_alt.p[1] = HID_KEY_SEMICOLON;
+                            if (multicore_fifo_wready ())
+                            {
+                                multicore_fifo_push_blocking (code_alt.u_msg);
+                            }
+
+                            Mods = 0;
+                            code_idx = 2;
+                            ucode = HID_KEY_A; // AlrGr + ; then a works for UK layouts...
+                        }
+                        else
+                        {
+                            ucode = HID_KEY_2;
+                        }
+                    }
+                    break;
+
+                    case Egr: // E-grave è
+                    {
+                        if ((Mods & KEYBOARD_MODIFIER_LEFTSHIFT) != 0)
+                        {
+                            code_alt.p[3] = KEYBOARD_MODIFIER_RIGHTALT;
+                            code_alt.p[2] = HID_KEY_ALT_RIGHT;
+                            code_alt.p[1] = HID_KEY_BACKSLASH;
+                            if (multicore_fifo_wready ())
+                            {
+                                multicore_fifo_push_blocking (code_alt.u_msg);
+                            }
+
+                            Mods = 0;
+                            code_idx = 2;
+                            ucode = HID_KEY_E; // AlrGr + # then e works for UK layouts...
+                        }
+                        else
+                        {
+                            ucode = HID_KEY_7;
+                        }
+                    }
+                    break;
+
+                    case Ugr: // U-grave ù
+                    {
+                        if ((Mods & KEYBOARD_MODIFIER_LEFTSHIFT) != 0)
+                        {
+                            code_alt.p[3] = KEYBOARD_MODIFIER_RIGHTALT;
+                            code_alt.p[2] = HID_KEY_ALT_RIGHT;
+                            code_alt.p[1] = HID_KEY_BACKSLASH;
+                            if (multicore_fifo_wready ())
+                            {
+                                multicore_fifo_push_blocking (code_alt.u_msg);
+                            }
+
+                            Mods = 0;
+                            code_idx = 2;
+                            ucode = HID_KEY_U; // AlrGr + # then u works for UK layouts...
+                        }
+                        else
+                        {
+                            ucode = HID_KEY_8;
+                        }
+                    }
+                    break;
+
+                    case Agr: // A-grave à
+                    {
+                        if ((Mods & KEYBOARD_MODIFIER_LEFTSHIFT) != 0)
+                        {
+                            code_alt.p[3] = KEYBOARD_MODIFIER_RIGHTALT;
+                            code_alt.p[2] = HID_KEY_ALT_RIGHT;
+                            code_alt.p[1] = HID_KEY_BACKSLASH;
+                            if (multicore_fifo_wready ())
+                            {
+                                multicore_fifo_push_blocking (code_alt.u_msg);
+                            }
+
+                            Mods = 0;
+                            code_idx = 2;
+                            ucode = HID_KEY_A; // AlrGr + # then a works for UK layouts...
+                        }
+                        else
+                        {
+                            ucode = HID_KEY_0;
                         }
                     }
                     break;
