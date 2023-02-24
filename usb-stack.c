@@ -104,6 +104,14 @@ static void send_hid_report(uint8_t report_id, uint32_t btn)
       // use to avoid sending multiple consecutive zero reports for the keyboard
       static bool has_keyboard_key = false;
 
+      bool do_reset = false;
+      // Were we sent an "All Keys Up" signal?
+      if (FLAG_ALL_UP == btn)
+      {
+        btn = 0;
+        do_reset = true;
+      }
+
       if ( btn )
       {
         msg_blk code;
@@ -123,7 +131,7 @@ static void send_hid_report(uint8_t report_id, uint32_t btn)
       else
       {
         // send an empty key report if previously had key pressed - KEY UP effectively
-        if ((has_keyboard_key) && (g_holding == 0))
+        if ((has_keyboard_key) && (do_reset))
         {
           tud_hid_keyboard_report(REPORT_ID_KEYBOARD, 0, NULL);
           has_keyboard_key = false;
@@ -146,7 +154,7 @@ static void send_hid_report(uint8_t report_id, uint32_t btn)
 // tud_hid_report_complete_cb() is used to send the next report after previous one is complete
 void hid_task(void)
 {
-  // Poll every PW_POLL (nominally 10ms)
+  // Poll every PW_POLL milliseconds
   const uint32_t interval_ms = PW_POLL;
   static uint32_t start_ms = 0;
 

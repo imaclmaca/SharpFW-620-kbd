@@ -12,6 +12,9 @@
 // Define the polling rate for the USB HID service
 #define PW_POLL  10  // default to 10ms polling rate
 
+#define ROW_MASK    0x000000FF
+#define FLAG_ALL_UP 0xFFFFFFFF
+
 /* Used to pass a key-combo from the keyboard thread to the USB thread.
  * Uses a Pico FIFO to pass a unit32_t. This word has 4 "codes" packed into
  * it as "modifiers", "k1", "k2", "k3".
@@ -33,9 +36,6 @@ extern void hid_task(void);
 
 // Defined in usb_descriptors.c
 extern void set_serial_string (char const *ser);
-
-// Used to denote if the keys are still held down or not (bit of a hack, TBH)
-extern int g_holding;
 
 #ifdef __cplusplus
  }

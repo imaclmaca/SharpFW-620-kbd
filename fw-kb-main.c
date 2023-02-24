@@ -16,8 +16,8 @@
 #include "fw-kb-main.h"
 
 /* Are we emitting serial debug? */
-#define SER_DBG_ON  1  // serial debug on
-//#undef SER_DBG_ON      // serial debug off
+//#define SER_DBG_ON  1  // serial debug on
+#undef SER_DBG_ON      // serial debug off
 
 // Keyboard mapping and decode tables
 #define FNK (10)  // Base of the "Function Key" range
@@ -175,8 +175,6 @@ static uint8_t const conv_table[128][2] =  { HID_ASCII_TO_KEYCODE };
 static __uint8_t prv_scan [COL_SZ]; // keys down on previous scan
 static __uint8_t cur_scan [COL_SZ]; // keys down on this scan
 
-int g_holding = 0;
-
 // circular buffer for key-codes, pending sending...
 #define KC_SZ 16
 #define KC_MSK (KC_SZ - 1)
@@ -211,7 +209,7 @@ uint32_t kc_get (void)
 
 /* Process the key matrix to determine which keys are pressed
  * and decide what to send to the USB stack. */
-static void process_keys (void)
+static void process_keys (int all_keys_up)
 {
     uint8_t Mods  = 0; // Which modifier bits are set
     uint8_t Kcode = 0; // What is the current key code
@@ -235,24 +233,45 @@ static void process_keys (void)
     int i_keys = 0;
     for (col = 0; ((col < COL_SZ) && (i_keys < MX_KEYS)); ++col)
     {
-        unsigned u_tst = 1;
-        for (row = 0; row < 8; ++row)
+        // Is any key down on this column?
+        if (ROW_MASK == cur_scan[col])
         {
-            if ((u_tst & cur_scan[col]) == 0)
+            // All keys are UP
+        }
+        else // There must be at least 1 bit down, find it now
+        {
+            unsigned u_tst = 1;
+            for (row = 0; row < 8; ++row)
             {
-                idx = (row * COL_SZ) + col;
-                keys [i_keys] = idx;
-                ++i_keys;
-                if (i_keys >= MX_KEYS)
+                if ((u_tst & cur_scan[col]) == 0)
                 {
-                    break;
+                    idx = (row * COL_SZ) + col;
+                    keys [i_keys] = idx;
+                    ++i_keys;
+                    if (i_keys >= MX_KEYS)
+                    {
+                        break;
+                    }
                 }
+                u_tst = u_tst << 1;
             }
-            u_tst = u_tst << 1;
         }
     }
+
     // Were any valid keys found?
-    if (i_keys < 1) return;
+    if (i_keys < 1)
+    {
+        // Are all the keys UP now? Tell the USB HID stack if so.
+        if (all_keys_up != 0)
+        {
+            if (multicore_fifo_wready ())
+            {
+                multicore_fifo_push_blocking (FLAG_ALL_UP);
+                all_keys_up = 0;
+            }
+        }
+        return; // No more keys to process
+    }
 
     /* Is there a modifier set? Scan the set for any modifiers first,
      * before we try to interpret any "normal" keys. */
@@ -670,6 +689,15 @@ static void process_keys (void)
             multicore_fifo_push_blocking (code.u_msg);
         }
     }
+    // Are all the keys UP now? Tell the USB HID stack if so.
+    if (all_keys_up != 0)
+    {
+        if (multicore_fifo_wready ())
+        {
+            multicore_fifo_push_blocking (FLAG_ALL_UP);
+            all_keys_up = 0;
+        }
+    }
 } // process_keys
 
 /* The "main" task on the second core.
@@ -679,25 +707,28 @@ void scan_thread (void)
     // signal to the primary thread that this worker thread is ready
     multicore_fifo_push_blocking (99);
 
-#define ROW_MASK 0x00FF
-
     int sel_line = 0; // For columns 0 to 9 (10 lines)
+    int all_off_count = 0;
     while (true)
     {
         unsigned set_ln = sel_line + 2; // Our "column 0" is GPIO line 2
 
         gpio_set_dir(set_ln, GPIO_OUT);
         gpio_put (set_ln, 0); // Drive test line low
-        // sleep_ms (1);
-        sleep_us (600);
+        sleep_us (200);
 
         unsigned u_row = gpio_get_all (); // Read the 8 rows (GPIO lines 12 to 19)
         u_row = (u_row >> 12) & ROW_MASK;
 
         cur_scan [sel_line] = (__uint8_t)u_row;
+        if (ROW_MASK == u_row)
+        {
+            // No keys are down in this row
+            ++all_off_count;
+        }
 
         gpio_put (set_ln, 1); // Drive test line high again
-        sleep_us (500);
+        sleep_us (50);
 
         // Set line back to an input
         gpio_set_dir(set_ln, GPIO_IN);
@@ -708,20 +739,31 @@ void scan_thread (void)
         {
             // Did a key change?
             int diff = memcmp (cur_scan, prv_scan, COL_SZ);
-            if (diff != 0)
+            if (diff != 0) // Something changed in the key map
             {
-                g_holding = 0;
+                // Set non-zero to flag all keys are up
+                int all_keys_up = 0;
+                /* If the previous map had keys down, and the current map does not
+                 * then we must have released all the keys - make sure a key up is
+                 * sent to the USB HID stack later. */
+                if (all_off_count >= COL_SZ)
+                {
+                    all_keys_up = COL_SZ;
+                }
+                else // some key must be pressed
+                {
+                    all_keys_up = 0;
+                }
+
                 // Something changed, scan the current set and process accordingly
-                process_keys ();
+                process_keys (all_keys_up);
                 // Record the new state
                 memcpy (prv_scan, cur_scan, COL_SZ);
             }
-            else // No change, hold the keys (this is a bit of a hack, TBH...)
-            {
-                g_holding = 1;
-            }
+
             // Restart scan sequence
             sel_line = 0;
+            all_off_count = 0;
         }
     }
 } // scan_thread
@@ -779,9 +821,10 @@ int main()
 
     tusb_init(); // start tinyusb
 
+#ifdef SER_DBG_ON
     stdio_init_all(); // Enable the Pico serial port
-
     printf ("\n-- Keyboard test starting --\n");
+#endif // SER_DBG_ON
 
     // Start the keyboard scanner thread on core-1
     multicore_launch_core1 (scan_thread);
@@ -791,11 +834,15 @@ int main()
     // cursory check that core-1 started OK
     if (g == 99)
     {
+#ifdef SER_DBG_ON
         printf ("Core-1 started OK\n");
+#endif // SER_DBG_ON
     }
     else
     {
+#ifdef SER_DBG_ON
         printf ("Core-1 not started correctly\n");
+#endif // SER_DBG_ON
     }
 
     // forever - read keycodes from core-1 and pass them to the hid_task() for sending
@@ -808,8 +855,11 @@ int main()
             kc_put (uv);
 
 #ifdef SER_DBG_ON
-            // diagnostic - echo the keycode to the serial i/o
-            printf ("  %08X \b\b\b\b\b\b\b\b\b\b\b", (unsigned)uv);
+            if (uv != FLAG_ALL_UP)
+            {
+                // diagnostic - echo the keycode to the serial i/o
+                printf ("  %08X \b\b\b\b\b\b\b\b\b\b\b", (unsigned)uv);
+            }
 #endif // SER_DBG_ON
         }
 
