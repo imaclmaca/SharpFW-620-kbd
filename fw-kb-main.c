@@ -150,7 +150,8 @@ static __uint8_t key_FN_table [ROW_SZ * COL_SZ] = {
     0,  TAB,  '`',  'q',  'a',  CAP,  F01,  SHF,  'z',    0
 };
 
-// The keymap with many (not all) of the Code-II keys mapped
+// The keymap with the Code-II keys mapped, though some are
+// mapped to keys I like rather than to that shown on the keycap!
 static __uint8_t key2_table [ROW_SZ * COL_SZ] = {
     0,  BCR,  BKT,  'p',  NSQ, '\\',  Agr,    0,  CED,  BCK,
   BSP,    0,  SPM,  'o',  'l',    0,  DEG,    0,  IQM,  WIN,
@@ -164,14 +165,14 @@ static __uint8_t key2_table [ROW_SZ * COL_SZ] = {
 
 // Table to "quickly" spot the modifier keys
 static __uint8_t is_mod_key [ROW_SZ * COL_SZ] = {
-  0, 0, 0, 0, 0,   0, 0,   0, 0,   0,
-  0, 0, 0, 0, 0,   0, 0,   0, 0, WIN,
-  0, 0, 0, 0, 0,   0, 0,   0, 0,   0,
-  0, 0, 0, 0, 0,   0, 0, CRR, 0,   0,
-  0, 0, 0, 0, 0,   0, 0, CTR, 0,   0,
-  0, 0, 0, 0, 0, BLK, 0,   0, 0, HLP,
-  0, 0, 0, 0, 0, CD2, 0,   0, 0, ALT,
-  0, 0, 0, 0, 0,   0, 0, SHF, 0,   0
+    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,
+    0,    0,    0,    0,    0,    0,    0,    0,    0,  WIN,
+    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,
+    0,    0,    0,    0,    0,    0,    0,  CRR,    0,    0,
+    0,    0,    0,    0,    0,    0,    0,  CTR,    0,    0,
+    0,    0,    0,    0,    0,  BLK,    0,    0,    0,  HLP,
+    0,    0,    0,    0,    0,  CD2,    0,    0,    0,  ALT,
+    0,    0,    0,    0,    0,    0,    0,  SHF,    0,    0
 };
 
 // The tinyusb ASCII -> HID code table
@@ -226,7 +227,11 @@ static void process_keys (int all_keys_up)
     code.u_msg = 0;     // Clear all the bytes in the union
     code_alt.u_msg = 0; // Clear all the bytes in the union
 
+    /* Which keymap is active? Start assuming we are using the "normal" keymap but
+     * this may be updated later when we scan the modifier keys and find the "HELP"
+     * or "Code-II" is active. */
     __uint8_t *pTable = key_table;
+
     // Pick the active keys out of the keymap
     int col;
     int row;
@@ -916,7 +921,7 @@ int main()
     char id_string [(2 * PICO_UNIQUE_BOARD_ID_SIZE_BYTES) + 1]; // Should be 17 - PICO_UNIQUE_BOARD_ID_SIZE_BYTES == 8
     pico_get_unique_board_id_string (id_string, 17);
 
-    set_serial_string (id_string);
+    set_serial_string (id_string); // Try and use the Pico board serial number as the unique USB serial ID
 
     // enable the board LED - we flash that to show USB state etc.
     const uint LED_PIN = PICO_DEFAULT_LED_PIN;
