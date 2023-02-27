@@ -29,6 +29,7 @@ typedef union
 
 // defined in fw-kb-main.c
 extern uint32_t kc_get (void);
+extern void set_caps_lock_led (int i_state);
 
 // Defined in usb-stack.c
 extern void led_blinking_task(void);

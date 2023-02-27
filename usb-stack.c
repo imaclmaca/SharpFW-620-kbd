@@ -51,7 +51,7 @@ enum  {
 static uint32_t blink_phase = 0;
 
 static const uint16_t blink_not_mounted [BLINK_LEN] = {80, 500, 80, 500}; // SHORT,long,SHORT,long
-static const uint16_t blink_mounted [BLINK_LEN] = {20, 2500, 20, 2500}; // SHORT,v.long,SHORT,v.long
+static const uint16_t blink_mounted [BLINK_LEN] = {10, 6500, 10, 6500}; // SHORT,v.long,SHORT,v.long
 static const uint16_t blink_suspended [BLINK_LEN] = {40, 100, 40, 1700}; // SHORT,short,SHORT,long
 
 // Used to track the LED flash state
@@ -234,13 +234,15 @@ void tud_hid_set_report_cb(uint8_t instance, uint8_t report_id, hid_report_type_
       {
         // Capslock On: disable blink, turn led on
         blink_state = BLINK_NONE;
-        board_led_write(true);
+        board_led_write(true); // Pico LED
+        set_caps_lock_led (0x55); // External LED on GPIO_22
       }
       else
       {
         // Caplocks Off: back to normal blink
-        board_led_write(false);
+        board_led_write(false); // Pico LED
         blink_state = BLINK_MOUNTED;
+        set_caps_lock_led (0); // External LED on GPIO_22
       }
     }
   }

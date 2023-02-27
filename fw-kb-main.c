@@ -213,6 +213,23 @@ uint32_t kc_get (void)
     return uv;
 }
 
+// Track whether we have been signalled Caps Lock or not
+#define LED_CAPS    22 // Assign our "extra" Caps Lock LED to GPIO_22
+static int is_caps_lock = 0;
+void set_caps_lock_led (int i_state)
+{
+    if (i_state == 0x55)
+    {
+        is_caps_lock = i_state;
+        gpio_put (LED_CAPS, 1);
+    }
+    else
+    {
+        is_caps_lock = 0;
+        gpio_put (LED_CAPS, 0);
+    }
+} // set_caps_lock_led
+
 /* Process the key matrix to determine which keys are pressed
  * and decide what to send to the USB stack. */
 static void process_keys (int all_keys_up)
@@ -927,6 +944,10 @@ int main()
     const uint LED_PIN = PICO_DEFAULT_LED_PIN;
     gpio_init(LED_PIN);
     gpio_set_dir(LED_PIN, GPIO_OUT);
+
+    // Add an extra LED for the Caps Lock light (beyond the on-baord Pico LED, that is!)
+    gpio_init(LED_CAPS);
+    gpio_set_dir(LED_CAPS, GPIO_OUT);
 
     int idx;
     // GPIO pins 2 to 11 (ten pins) drive the select lines
