@@ -40,7 +40,7 @@
 
 /* Blink pattern */
 enum  {
-  BLINK_NONE = 0,  // We do this when Caps Lock is set, to turn the light "always on"
+  BLINK_NONE = 0, // Set this when Caps Lock is active, to turn the light "always on"
   BLINK_NOT_MOUNTED,
   BLINK_MOUNTED,
   BLINK_SUSPENDED
@@ -50,9 +50,9 @@ enum  {
 #define BLINK_MASK (BLINK_LEN - 1)
 static uint32_t blink_phase = 0;
 
-static const uint16_t blink_not_mounted [BLINK_LEN] = {80, 500, 80, 500}; // SHORT,long,SHORT,long
-static const uint16_t blink_mounted [BLINK_LEN] = {10, 6500, 10, 6500}; // SHORT,v.long,SHORT,v.long
-static const uint16_t blink_suspended [BLINK_LEN] = {40, 100, 40, 1700}; // SHORT,short,SHORT,long
+static const uint16_t blink_not_mounted [BLINK_LEN] = {40,  500, 40,  500}; // SHORT,   long, SHORT,   long
+static const uint16_t blink_mounted [BLINK_LEN]     = {10, 6500, 10, 6500}; // SHORT, v.long, SHORT, v.long
+static const uint16_t blink_suspended [BLINK_LEN]   = {20,  100, 20, 2000}; // SHORT,  short, SHORT, v.long
 
 // Used to track the LED flash state
 static uint32_t blink_state = BLINK_NOT_MOUNTED;
@@ -141,7 +141,6 @@ static void send_hid_report(uint8_t report_id, uint32_t btn)
     break;
 
     /* The original example also provided these endpoints, but we do not use them here... */
-    // All the other endpoints from the example code are skipped
     //case REPORT_ID_MOUSE:
     //case REPORT_ID_CONSUMER_CONTROL:
     //case REPORT_ID_GAMEPAD:
@@ -163,7 +162,7 @@ void hid_task(void)
 
   uint32_t const btn = kc_get ();
 
-  // Remote wakeup
+  // Remote wake-up
   if ( tud_suspended() && btn )
   {
     // Wake up host if we are in suspend mode
@@ -172,7 +171,7 @@ void hid_task(void)
   }
   else
   {
-    // Send the 1st element of the report chain, the rest will be sent by tud_hid_report_complete_cb()
+    // Send the 1st element of the report chain, any others will be sent by tud_hid_report_complete_cb()
     send_hid_report(REPORT_ID_KEYBOARD, btn);
   }
 } // hid_task
@@ -233,16 +232,16 @@ void tud_hid_set_report_cb(uint8_t instance, uint8_t report_id, hid_report_type_
       if (kbd_leds & KEYBOARD_LED_CAPSLOCK)
       {
         // Capslock On: disable blink, turn led on
-        blink_state = BLINK_NONE;
-        board_led_write(true); // Pico LED
-        set_caps_lock_led (0x55); // External LED on GPIO_22
+        blink_state = BLINK_NONE;    // Stop led_blinking_task() from flashing the LED
+        board_led_write(true);       // Pico LED ON
+        set_caps_lock_led (CAPS_ON); // External LED on GPIO_22 ON
       }
       else
       {
         // Caplocks Off: back to normal blink
-        board_led_write(false); // Pico LED
-        blink_state = BLINK_MOUNTED;
-        set_caps_lock_led (0); // External LED on GPIO_22
+        board_led_write(false);      // Pico LED OFF
+        blink_state = BLINK_MOUNTED; // Re-enable led_blinking_task() flashing the LED
+        set_caps_lock_led (0);       // External LED on GPIO_22 OFF
       }
     }
   }
@@ -256,7 +255,7 @@ void led_blinking_task(void)
   static uint32_t start_ms = 0;
   static int led_state = 0;
 
-  // blink is disabled - typically happens when Caps Lock is set ON by tud_hid_set_report_cb()
+  // blink is disabled - happens when Caps Lock is set ON by tud_hid_set_report_cb()
   if (BLINK_NONE == blink_state) return;
 
   const uint16_t *seq = NULL;

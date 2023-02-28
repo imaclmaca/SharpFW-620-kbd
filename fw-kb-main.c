@@ -188,7 +188,7 @@ static uint32_t kc_buf [KC_SZ];
 static uint32_t kc_in  = 0;
 static uint32_t kc_out = 0;
 
-// Used by main() to queue up payloads for sending to the USB hid_task()
+// Used by main() to queue up Key Codes for sending to the USB hid_task()
 static void kc_put (uint32_t uv)
 {
     uint32_t next = (kc_in + 1) & KC_MSK;
@@ -201,10 +201,10 @@ static void kc_put (uint32_t uv)
     kc_in = next;
 }
 
-// Used by hid_task() in usb-stack.c to read payloads to send on the USB
+// Used by hid_task() in usb-stack.c to read Key Codes to send on the USB
 uint32_t kc_get (void)
 {
-    if (kc_in == kc_out)
+    if (kc_in == kc_out) // queue is empty
     {
         return 0;
     }
@@ -218,7 +218,7 @@ uint32_t kc_get (void)
 static int is_caps_lock = 0;
 void set_caps_lock_led (int i_state)
 {
-    if (i_state == 0x55)
+    if (i_state == CAPS_ON)
     {
         is_caps_lock = i_state;
         gpio_put (LED_CAPS, 1);
@@ -241,12 +241,13 @@ static void process_keys (int all_keys_up)
     msg_blk code_alt; // Holds an additional USB code, e.g. for sending composed keys
     int code_idx = 2; // Records how many "slots" have been used in msg_blk code
 
-    code.u_msg = 0;     // Clear all the bytes in the union
-    code_alt.u_msg = 0; // Clear all the bytes in the union
+    code.u_msg = 0;     // Clear all the bytes in the key-code union
+    code_alt.u_msg = 0; // Clear all the bytes in the "extra keys" union
 
-    /* Which keymap is active? Start assuming we are using the "normal" keymap but
-     * this may be updated later when we scan the modifier keys and find the "HELP"
-     * or "Code-II" is active. */
+    /* Which keymap is active?
+     * Start assuming we are using the "normal" keymap but this can be updated
+     * later when we scan the modifier keys and find the "HELP" or "Code-II"
+     * modifier key is being held. */
     __uint8_t *pTable = key_table;
 
     // Pick the active keys out of the keymap
@@ -299,11 +300,12 @@ static void process_keys (int all_keys_up)
                 multicore_fifo_push_blocking (FLAG_ALL_UP);
             }
         }
-        return; // No more keys to process
+        return; // No more keys to process on this pass
     }
 
     /* Is there a modifier set? Scan the set for any modifiers first,
-     * before we try to interpret any "normal" keys. */
+     * before we try to interpret any "normal" keys. (Since the modifier
+     * may change the meaning of the "normal" key.) */
     int is_mod = 0;
     for (idx = 0; idx < i_keys; ++idx)
     {
@@ -742,7 +744,7 @@ static void process_keys (int all_keys_up)
 
                             Mods = 0;
                             code_idx = 2;
-                            ucode = HID_KEY_A; // AlrGr + ; then a works for UK layouts...
+                            ucode = HID_KEY_A; // AlrGr + ; then "a" works for UK layouts...
                         }
                         else
                         {
@@ -765,7 +767,7 @@ static void process_keys (int all_keys_up)
 
                             Mods = 0;
                             code_idx = 2;
-                            ucode = HID_KEY_E; // AlrGr + # then e works for UK layouts...
+                            ucode = HID_KEY_E; // AlrGr + # then "e" works for UK layouts...
                         }
                         else
                         {
@@ -788,7 +790,7 @@ static void process_keys (int all_keys_up)
 
                             Mods = 0;
                             code_idx = 2;
-                            ucode = HID_KEY_U; // AlrGr + # then u works for UK layouts...
+                            ucode = HID_KEY_U; // AlrGr + # then "u" works for UK layouts...
                         }
                         else
                         {
@@ -811,7 +813,7 @@ static void process_keys (int all_keys_up)
 
                             Mods = 0;
                             code_idx = 2;
-                            ucode = HID_KEY_A; // AlrGr + # then a works for UK layouts...
+                            ucode = HID_KEY_A; // AlrGr + # then "a" works for UK layouts...
                         }
                         else
                         {
@@ -852,7 +854,6 @@ static void process_keys (int all_keys_up)
         if (multicore_fifo_wready ())
         {
             multicore_fifo_push_blocking (FLAG_ALL_UP);
-            all_keys_up = 0;
         }
     }
 } // process_keys
@@ -945,7 +946,7 @@ int main()
     gpio_init(LED_PIN);
     gpio_set_dir(LED_PIN, GPIO_OUT);
 
-    // Add an extra LED for the Caps Lock light (beyond the on-baord Pico LED, that is!)
+    // Add an extra LED for the Caps Lock light (other than the on-board Pico LED, that is!)
     gpio_init(LED_CAPS);
     gpio_set_dir(LED_CAPS, GPIO_OUT);
 

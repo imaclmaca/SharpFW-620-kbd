@@ -15,8 +15,11 @@
 #define ROW_MASK    0x000000FF
 #define FLAG_ALL_UP 0xFFFFFFFF
 
+ // Code to signal Caps Lock on
+#define CAPS_ON     0x55
+
 /* Used to pass a key-combo from the keyboard thread to the USB thread.
- * Uses a Pico FIFO to pass a unit32_t. This word has 4 "codes" packed into
+ * Uses a Pico FIFO to pass a uint32_t. This word has 4 "codes" packed into
  * it as "modifiers", "k1", "k2", "k3".
  * At most this supports a 3-key combo, which gamers might find derisory
  * but is plenty here since the FontWriter matrix has no diodes and is
